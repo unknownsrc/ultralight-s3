@@ -12,10 +12,6 @@
     "esModuleInterop": true,
     "sourceMap": true,
     "baseUrl": ".",
-    "paths": {
-      "crypto-wrapper": ["src/utils/crypto-wrapper.ts"]
-    }
   },
-  "include": ["src/*", "src/utils/crypto-wrapper.ts"],
   "exclude": ["node_modules", "dev", "tests", "lib"],
 }

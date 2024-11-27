@@ -110,10 +110,9 @@ type HttpMethod = 'POST' | 'GET' | 'HEAD' | 'PUT' | 'DELETE';
 type ExistResponseCode = false | true | null;
 
 // the old way to work with crypto - without browser support
-// let _createHmac = crypto.createHmac || (await import('node:crypto')).createHmac;
-// let _createHash = crypto.createHash || (await import('node:crypto')).createHash;
+let _createHmac = crypto.createHmac || (await import('node:crypto')).createHmac;
+let _createHash = crypto.createHash || (await import('node:crypto')).createHash;
 
-import { _createHmac, _createHash } from 'crypto-wrapper';
 if (typeof _createHmac === 'undefined' && typeof _createHash === 'undefined') {
   console.error(
     'ultralight-S3 Module: Crypto functions are not available, please report the issue with necessary description: https://github.com/sentienhq/ultralight-s3/issues',
@@ -1098,10 +1097,7 @@ class S3 {
       method,
       headers,
       body: ['GET', 'HEAD'].includes(method) ? undefined : body,
-      signal: this.requestAbortTimeout !== undefined ? AbortSignal.timeout(this.requestAbortTimeout) : undefined,
-      mode: 'cors', // Ensure CORS mode is enabled
-      credentials: 'omit', // Ensure credentials are included
-      cache: 'no-store',
+      signal: this.requestAbortTimeout !== undefined ? AbortSignal.timeout(this.requestAbortTimeout) : undefined
     });
     this._log('info', `Response status: ${(res.status, toleratedStatusCodes)}`);
     if (!res.ok && !toleratedStatusCodes.includes(res.status)) {
