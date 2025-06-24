@@ -208,10 +208,11 @@ declare class S3 {
      * Put an object into the bucket.
      * @param {string} key - The key of the object to put. To create a folder, include a trailing slash.
      * @param {Buffer|string} data - The content of the object to put.
+     * @param {string} contentType - The MIME type of the object.
      * @returns {Promise<Response>} The response from the put operation.
      * @throws {TypeError} If the key is not a non-empty string or data is not a Buffer or string.
      */
-    put(key: string, data: string | Buffer): Promise<Response>;
+    put(key: string, data: Buffer, contentType?: string): Promise<Response>;
     /**
      * Initiate a multipart upload.
      * @param {string} key - The key of the object to upload.
