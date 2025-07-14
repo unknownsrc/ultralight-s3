@@ -360,19 +360,24 @@ class S3 {
   /**
    * Get the content length of an object.
    * @param {string} key - The key of the object.
-   * @returns {Promise<number>} The content length of the object in bytes.
+   * @returns {Promise<Response | null>} The response of the object. If the object does not exist, null will be returned.
    * @throws {TypeError} If the key is not a non-empty string.
    */
-  async getContentLength(key: string): Promise<number> {
+  async getHead(key: string): Promise<Response | null> {
     this._checkKey(key);
     const headers = {
       [HEADER_AMZ_CONTENT_SHA256]: UNSIGNED_PAYLOAD,
     };
     const encodedKey = uriResourceEscape(key);
     const { url, headers: signedHeaders } = await this._sign('HEAD', encodedKey, {}, headers, '');
-    const res = await this._sendRequest(url, 'HEAD', signedHeaders);
-    const contentLength = res.headers.get(HEADER_CONTENT_LENGTH);
-    return contentLength ? parseInt(contentLength, 10) : 0;
+    const res = await this._sendRequest(url, 'HEAD', signedHeaders, '', [200, 404, 403]);
+    if (res.status === 404) {
+      return null;
+    } else if (!res.ok) {
+      this._log('error', `Failed to get object. Status: ${res.status}`);
+      throw new Error(`Failed to get object. Status: ${res.status}`);
+    }
+    return res
   }
 
   /**
@@ -443,6 +448,25 @@ class S3 {
       throw new Error(`${ERROR_PREFIX}Failed to check if file exists: ${errorMessage}`);
     }
   }
+
+   /**
+   * Get the response of the HEAD request to a file.
+   * @param {string} key - The key of the object.
+   * @returns {Promise<number>} The content length of the object in bytes.
+   * @throws {TypeError} If the key is not a non-empty string.
+   */
+  async getContentLength(key: string): Promise<number> {
+    this._checkKey(key);
+    const headers = {
+      [HEADER_AMZ_CONTENT_SHA256]: UNSIGNED_PAYLOAD,
+    };
+    const encodedKey = uriResourceEscape(key);
+    const { url, headers: signedHeaders } = await this._sign('HEAD', encodedKey, {}, headers, '');
+    const res = await this._sendRequest(url, 'HEAD', signedHeaders);
+    const contentLength = res.headers.get(HEADER_CONTENT_LENGTH);
+    return contentLength ? parseInt(contentLength, 10) : 0;
+  }
+
   private async _sign(
     method: HttpMethod,
     keyPath: string,

@@ -124,10 +124,10 @@ declare class S3 {
     /**
      * Get the content length of an object.
      * @param {string} key - The key of the object.
-     * @returns {Promise<number>} The content length of the object in bytes.
+     * @returns {Promise<Response | null>} The response of the object. If the object does not exist, null will be returned.
      * @throws {TypeError} If the key is not a non-empty string.
      */
-    getContentLength(key: string): Promise<number>;
+    getHead(key: string): Promise<Response | null>;
     /**
      * Check if a bucket exists.
      * @returns {Promise<boolean>} True if the bucket exists, false otherwise.
@@ -142,6 +142,13 @@ declare class S3 {
      * @throws {TypeError} If the key is not a non-empty string.
      */
     fileExists(key: string, opts?: Record<string, any>): Promise<ExistResponseCode>;
+    /**
+    * Get the response of the HEAD request to a file.
+    * @param {string} key - The key of the object.
+    * @returns {Promise<number>} The content length of the object in bytes.
+    * @throws {TypeError} If the key is not a non-empty string.
+    */
+    getContentLength(key: string): Promise<number>;
     private _sign;
     private _buildCanonicalHeaders;
     _buildCanonicalRequest(method: HttpMethod, url: URL, query: Object, canonicalHeaders: string, signedHeaders: string, body: string | Buffer): Promise<string>;
