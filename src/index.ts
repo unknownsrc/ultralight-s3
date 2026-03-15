@@ -10,6 +10,9 @@ const UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD';
 const DEFAULT_STREAM_CONTENT_TYPE = 'application/octet-stream';
 const XML_CONTENT_TYPE = 'application/xml';
 const JSON_CONTENT_TYPE = 'application/json';
+const RETRYABLE_STATUS_CODES = [503];
+const MAX_RETRY_ATTEMPTS = 3;
+const INITIAL_RETRY_DELAY_MS = 250;
 // List of keys that might contain sensitive information
 const SENSITIVE_KEYS_REDACTED = ['accessKeyId', 'secretAccessKey', 'sessionToken', 'password'];
 const MIN_MAX_REQUEST_SIZE_IN_BYTES = 5 * 1024 * 1024;
@@ -133,6 +136,8 @@ const uriEscape = (uriStr: string): string => {
 const uriResourceEscape = (string: string): string => {
   return uriEscape(string).replace(/%2F/g, '/');
 };
+
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * S3 class for interacting with S3-compatible object storage services.
@@ -1123,22 +1128,32 @@ class S3 {
     toleratedStatusCodes: number[] = [],
   ): Promise<Response> {
     this._log('info', `Sending ${method} request to ${url}, headers: ${JSON.stringify(headers)}`);
-    // Remove forbidden headers
-    // const safeHeaders = { ...headers };
-    // delete safeHeaders[HEADER_HOST]; // Browser sets this automatically
-    // delete safeHeaders[HEADER_CONTENT_LENGTH]; // Browser sets this based on the body
+    for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: ['GET', 'HEAD'].includes(method) ? undefined : body,
+        signal: this.requestAbortTimeout !== undefined ? AbortSignal.timeout(this.requestAbortTimeout) : undefined,
+      });
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: ['GET', 'HEAD'].includes(method) ? undefined : body,
-      signal: this.requestAbortTimeout !== undefined ? AbortSignal.timeout(this.requestAbortTimeout) : undefined
-    });
-    this._log('info', `Response status: ${(res.status, toleratedStatusCodes)}`);
-    if (!res.ok && !toleratedStatusCodes.includes(res.status)) {
-      await this._handleErrorResponse(res);
+      this._log('info', `Response status: ${res.status}`);
+      if (RETRYABLE_STATUS_CODES.includes(res.status) && attempt < MAX_RETRY_ATTEMPTS) {
+        const retryDelay = INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1);
+        this._log('info', `Retrying ${method} request to ${url} after ${res.status} response`, {
+          attempt,
+          retryDelay,
+        });
+        await sleep(retryDelay);
+        continue;
+      }
+
+      if (!res.ok && !toleratedStatusCodes.includes(res.status)) {
+        await this._handleErrorResponse(res);
+      }
+      return res;
     }
-    return res;
+
+    throw new Error(`${ERROR_PREFIX}Request retry loop exited unexpectedly`);
   }
 
   async _handleErrorResponse(res: Response) {
