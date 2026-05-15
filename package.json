@@ -1,6 +1,6 @@
 {
   "name": "@unknownsrc/ultralight-s3",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "🪽 A turbo lightweight S3 client, no-dependency, ideal for edges or platforms like @cloudflare @aws @Azure @GoogleCloudPlatform @ceph @minio",
   "main": "./lib/index.cjs",
   "module": "./lib/index.js",

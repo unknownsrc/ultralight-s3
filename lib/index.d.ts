@@ -269,7 +269,7 @@ declare class S3 {
     _sendRequest(url: string, method: HttpMethod, headers: Record<string, string | any>, body?: string | Buffer, toleratedStatusCodes?: number[]): Promise<Response>;
     _handleErrorResponse(res: Response): Promise<void>;
     _buildCanonicalQueryString(queryParams: Object): string;
-    _getSignatureKey(dateStamp: string): Promise<string>;
+    _getSignatureKey(dateStamp: string): Promise<Buffer>;
 }
 export declare const sanitizeETag: (etag: string) => string;
 export { S3 };

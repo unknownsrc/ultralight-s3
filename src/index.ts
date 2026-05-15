@@ -1204,7 +1204,7 @@ class S3 {
       .map(key => `${encodeURIComponent(key)}=${encodeURIComponent((queryParams as any)[key])}`)
       .join('&');
   }
-  async _getSignatureKey(dateStamp: string): Promise<string> {
+  async _getSignatureKey(dateStamp: string): Promise<Buffer> {
     const kDate = await _hmac(`AWS4${this.secretAccessKey}`, dateStamp);
     const kRegion = await _hmac(kDate, this.region);
     const kService = await _hmac(kRegion, S3_SERVICE);
@@ -1219,12 +1219,14 @@ const _hash = async (content: string | Buffer): Promise<string> => {
   return String(hashSum.digest('hex'));
 };
 
-const _hmac = async (key: string | Buffer, content: string, encoding?: 'hex'): Promise<string> => {
+async function _hmac(key: string | Buffer, content: string): Promise<Buffer>;
+async function _hmac(key: string | Buffer, content: string, encoding: 'hex'): Promise<string>;
+async function _hmac(key: string | Buffer, content: string, encoding?: 'hex'): Promise<Buffer | string> {
   await ensureNodeCrypto();
   const hmacSum = _createHmac!('sha256', key);
   hmacSum.update(content);
-  return String(hmacSum.digest(encoding));
-};
+  return encoding ? hmacSum.digest(encoding) : hmacSum.digest();
+}
 export const sanitizeETag = (etag: string): string => {
   const replaceChars: Record<string, string> = {
     '"': '',
