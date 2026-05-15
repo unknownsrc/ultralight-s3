@@ -113,15 +113,40 @@ type HttpMethod = 'POST' | 'GET' | 'HEAD' | 'PUT' | 'DELETE';
 // null - ETag mismatch (412)
 type ExistResponseCode = false | true | null;
 
-// the old way to work with crypto - without browser support
-let _createHmac = crypto.createHmac || (await import('node:crypto')).createHmac;
-let _createHash = crypto.createHash || (await import('node:crypto')).createHash;
+type HmacFactory = (
+  algorithm: string,
+  key: string | Buffer,
+) => {
+  update: (data: string | Buffer) => void;
+  digest: (encoding?: 'hex' | 'base64' | 'latin1') => string | Buffer;
+};
 
-if (typeof _createHmac === 'undefined' && typeof _createHash === 'undefined') {
-  console.error(
-    'ultralight-S3 Module: Crypto functions are not available, please report the issue with necessary description: https://github.com/sentienhq/ultralight-s3/issues',
-  );
-}
+type HashFactory = (algorithm: string) => {
+  update: (data: string | Buffer) => void;
+  digest: (encoding?: 'hex' | 'base64' | 'latin1') => string | Buffer;
+};
+
+let _createHmac = crypto.createHmac as HmacFactory | undefined;
+let _createHash = crypto.createHash as HashFactory | undefined;
+let nodeCryptoPromise: Promise<typeof import('node:crypto')> | null = null;
+
+const ensureNodeCrypto = async (): Promise<void> => {
+  if (_createHmac && _createHash) {
+    return;
+  }
+
+  if (!nodeCryptoPromise) {
+    nodeCryptoPromise = import('node:crypto');
+  }
+
+  const nodeCrypto = await nodeCryptoPromise.catch(error => {
+    throw new Error(
+      `ultralight-S3 Module: Crypto functions are not available in this runtime. ${error instanceof Error ? error.message : String(error)}`,
+    );
+  });
+  _createHmac ||= nodeCrypto.createHmac;
+  _createHash ||= nodeCrypto.createHash;
+};
 
 const expectArray: { [key: string]: boolean } = {
   contents: true,
@@ -1188,15 +1213,17 @@ class S3 {
 }
 
 const _hash = async (content: string | Buffer): Promise<string> => {
-  const hashSum = _createHash('sha256');
+  await ensureNodeCrypto();
+  const hashSum = _createHash!('sha256');
   hashSum.update(content);
-  return hashSum.digest('hex');
+  return String(hashSum.digest('hex'));
 };
 
 const _hmac = async (key: string | Buffer, content: string, encoding?: 'hex'): Promise<string> => {
-  const hmacSum = _createHmac('sha256', key);
+  await ensureNodeCrypto();
+  const hmacSum = _createHmac!('sha256', key);
   hmacSum.update(content);
-  return hmacSum.digest(encoding);
+  return String(hmacSum.digest(encoding));
 };
 export const sanitizeETag = (etag: string): string => {
   const replaceChars: Record<string, string> = {

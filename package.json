@@ -1,36 +1,32 @@
 {
   "name": "@unknownsrc/ultralight-s3",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "🪽 A turbo lightweight S3 client, no-dependency, ideal for edges or platforms like @cloudflare @aws @Azure @GoogleCloudPlatform @ceph @minio",
-  "main": "./lib/index.min.js",
-  "module": "./lib/index.min.js",
+  "main": "./lib/index.cjs",
+  "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "type": "module",
   "exports": {
     ".": {
-      "import": {
-        "types": "./lib/index.d.ts",
-        "default": "./lib/index.min.js"
-      },
-      "types": {
-        "import": {
-          "types": "./lib/index.d.ts",
-          "default": "./lib/index.d.ts"
-        }
-      }
+      "types": "./lib/index.d.ts",
+      "require": "./lib/index.cjs",
+      "import": "./lib/index.js"
     },
     "./full": {
-      "import": {
-        "types": "./lib/index.d.ts",
-        "default": "./lib/index.js"
-      }
+      "types": "./lib/index.d.ts",
+      "require": "./lib/index.cjs",
+      "import": "./lib/index.js"
+    },
+    "./min": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.min.js"
     },
     "./package.json": "./package.json"
   },
   "scripts": {
     "prepublishOnly": "npm run build",
     "build:ts": "tsc",
-    "build": "tsc --module nodenext --outDir ./lib/ &&  esbuild lib/index.js --bundle --outfile=lib/index.min.js --platform=node --format=esm --minify --sourcemap",
+    "build": "tsc --module nodenext --outDir ./lib/ && esbuild lib/index.js --bundle --outfile=lib/index.min.js --platform=node --format=esm --minify --sourcemap && esbuild lib/index.js --bundle --outfile=lib/index.cjs --platform=node --format=cjs --sourcemap",
     "dev:wrangler": "npm run build && wrangler dev --port 8787",
     "dev:node": "nodemon --watch './src/index.ts' --delay 2.5 -L --verbose --exec 'tsc --module nodenext --outDir ./lib/ && node --max-old-space-size=4096 --env-file ./.env ./dev/node-dev.js'",
     "test:minio": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config node.jest.config.json",
